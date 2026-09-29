@@ -130,6 +130,18 @@ port_in_use() {
   ss -ltn "sport = :$1" 2>/dev/null | tail -n +2 | grep -q .
 }
 
+# 用户主动执行的启动 / 重启先清掉失败计数：systemd 默认 10 秒内启动超过 5 次就拒绝再启动
+# （start-limit-hit），连着改几次配置、或升级失败回滚之后紧接着再操作，都会撞上这条限制
+service_start() {
+  systemctl reset-failed "$SERVICE" 2>/dev/null || true
+  systemctl start "$SERVICE"
+}
+
+service_restart() {
+  systemctl reset-failed "$SERVICE" 2>/dev/null || true
+  systemctl restart "$SERVICE"
+}
+
 # 等到 /api/health 能响应。进程起来不等于能用：配置写错、端口被占都会让它起来又立刻退出
 wait_healthy() {
   local url i=0 rc
@@ -327,7 +339,8 @@ cmd_install() {
   activate_binary
   install_unit "$PKG_UNIT"
   install_self
-  systemctl enable --now --quiet "$SERVICE"
+  systemctl enable --quiet "$SERVICE"
+  service_start
   wait_healthy_or_die
 
   say "已启动"
@@ -360,7 +373,7 @@ cmd_upgrade() {
   activate_binary
   if [[ -n $PKG_UNIT ]]; then install_unit "$PKG_UNIT"; fi
   install_self
-  systemctl restart "$SERVICE"
+  service_restart
   if wait_healthy; then
     say "升级完成"
     wait_ready
@@ -373,7 +386,7 @@ cmd_upgrade() {
   mv -f -- "$BIN_PATH.prev" "$BIN_PATH"
   mv -f -- "$UNIT_BACKUP" "$UNIT_PATH"
   systemctl daemon-reload
-  systemctl restart "$SERVICE"
+  service_restart
   if wait_healthy; then
     warn "已退回 $old_version，服务恢复正常。新版本的问题看上面的日志"
   else
@@ -398,7 +411,7 @@ cmd_rollback() {
     swap_files "$UNIT_PATH" "$UNIT_BACKUP"
     systemctl daemon-reload
   fi
-  systemctl restart "$SERVICE"
+  service_restart
   wait_healthy_or_die
   say "已退回 $previous；再执行一次 rollback 可以回到 $current"
   wait_ready
@@ -408,7 +421,7 @@ cmd_start() {
   require_systemd
   require_root
   require_installed
-  systemctl start "$SERVICE"
+  service_start
   wait_healthy_or_die
   say "已启动"
   wait_ready
@@ -418,7 +431,7 @@ cmd_restart() {
   require_systemd
   require_root
   require_installed
-  systemctl restart "$SERVICE"
+  service_restart
   wait_healthy_or_die
   say "已重启"
   wait_ready

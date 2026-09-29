@@ -8,6 +8,10 @@ Description=TorrentSpider 磁力搜索服务
 Documentation=https://github.com/bestyize/TorrentSpiderRust/blob/master/docs/deployment.md
 After=network-online.target
 Wants=network-online.target
+# 崩溃循环保护：5 分钟内自动重启超过 5 次就停下来，免得配置写错时无限重启刷屏日志。
+# 手动 start / restart 前运维脚本会先 reset-failed，不受这条限制
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
 Type=simple

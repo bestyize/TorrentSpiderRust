@@ -141,6 +141,12 @@ jobs:
           curl -fsS "$health" > /dev/null
           echo "::endgroup::"
 
+          echo "::group::rapid restarts"
+          # 连着重启超过 systemd 的启动频率限制（StartLimitBurst），脚本要能照常启动
+          for _ in 1 2 3 4 5 6 7; do sudo torrent-spider restart > /dev/null; done
+          curl -fsS "$health" > /dev/null
+          echo "::endgroup::"
+
           echo "::group::stop / start"
           sudo torrent-spider stop
           if curl -fsS "$health" 2> /dev/null; then echo "stop 之后服务还在响应"; exit 1; fi
