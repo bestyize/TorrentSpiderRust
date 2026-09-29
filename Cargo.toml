@@ -1,0 +1,24 @@
+[workspace]
+resolver = "3"
+members = ["crates/torrent-spider", "crates/torrent-spider-server"]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "MIT"
+rust-version = "1.88"
+
+# 发布构建：去掉调试符号、跨 crate 优化，产物更小更快
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+# 两个 crate 共用的依赖在这里统一版本，成员里写 `xxx.workspace = true`
+[workspace.dependencies]
+torrent-spider = { path = "crates/torrent-spider", version = "0.1.0" }
+async-trait = "0.1.92"
+futures = "0.3.34"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tokio = "1.53.1"

@@ -1,0 +1,99 @@
+# 手动构建 Linux x86_64 的 torrent-spider-server。
+#
+# 在 GitHub 的 Actions 页选中本 workflow，点「Run workflow」即可；也可以用命令行：
+#   gh workflow run build-linux-server.yml -f target=x86_64-unknown-linux-musl
+# 产物在该次运行页面底部的 Artifacts 里。
+
+name: Build Linux server
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 构建目标。musl 是静态链接，任意 x86_64 Linux 发行版都能直接跑；gnu 依赖系统的 glibc
+        type: choice
+        default: x86_64-unknown-linux-musl
+        options:
+          - x86_64-unknown-linux-musl
+          - x86_64-unknown-linux-gnu
+      run_tests:
+        description: 构建前先跑全部测试
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  TARGET: ${{ inputs.target }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ inputs.target }}
+
+      # reqwest 的 TLS 走 rustls + aws-lc-rs，aws-lc-sys 要编 C 代码；musl 目标需要 musl 的 C 工具链
+      - name: Install musl toolchain
+        if: endsWith(inputs.target, '-musl')
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends musl-tools
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ inputs.target }}
+
+      - name: Test
+        if: inputs.run_tests
+        run: cargo test --workspace --all-features --locked
+
+      - name: Build
+        run: cargo build --release --locked -p torrent-spider-server --target "$TARGET"
+
+      - name: Package
+        id: package
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 \
+            | jq -r '.packages[] | select(.name == "torrent-spider-server") | .version')
+          name="torrent-spider-server-${version}-${TARGET}"
+          mkdir -p "dist/$name"
+          cp "target/$TARGET/release/torrent-spider-server" "dist/$name/"
+          cp README.md "dist/$name/"
+          cp docs/api.md "dist/$name/API.md"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          (cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      # 真的把二进制跑起来打一次 /api/health：链接出错、静态资源没嵌进去这类问题只有运行时才暴露。
+      # 关掉违禁过滤，免得冒烟测试依赖外网拉 IP 段。
+      - name: Smoke test
+        run: |
+          bin="dist/${{ steps.package.outputs.name }}/torrent-spider-server"
+          file "$bin"
+          if [[ "$TARGET" == *-musl ]]; then
+            ! ldd "$bin" 2>/dev/null | grep -q '=>' || { echo "musl 产物不应动态链接任何库"; exit 1; }
+          fi
+          PORT=55555 HOST=127.0.0.1 SENSITIVE_FILTER=0 "$bin" &
+          pid=$!
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:55555/api/health && break
+            sleep 1
+          done
+          echo
+          curl -fsS -o /dev/null http://127.0.0.1:55555/index.html
+          curl -fsS http://127.0.0.1:55555/api/sources | jq -e '.sources | length == 11' > /dev/null
+          kill "$pid"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: |
+            dist/${{ steps.package.outputs.name }}.tar.gz
+            dist/${{ steps.package.outputs.name }}.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 30

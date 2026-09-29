@@ -1,0 +1,924 @@
+/*
+ * TorrentSpider 磁力站样式。
+ *
+ * 取向：苹果式的克制——系统字体栈、大留白、极轻阴影、大圆角、单一强调色。
+ * 强调色与语义色取自 Compose 主题（AppTheme.kt 的 Copper / Ink / Shell / Berry），
+ * 但底色换成中性的白/灰，比原来的珊瑚粉底更像「苹果」。
+ * 要严格统一成珊瑚粉底，只改下面这组变量即可，其余规则全部引用变量。
+ */
+
+:root {
+    /* 强调色：Compose 的 Copper */
+    --accent: #FD7979;
+    --accent-strong: #F26060;
+    --accent-soft: #FFF1EE; /* = Shell */
+    --accent-tint: #FCE5EC; /* = BerryTint */
+
+    --ink: #183042;
+    --slate: #6E6872;
+    --mist: #E7E7EA;
+
+    /* 中性底：这次与 Compose 的珊瑚粉底不同，刻意压成白/灰 */
+    --bg: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-sunken: #F5F5F7;
+
+    /* 语义色，和结果卡上的 chip 一一对应 */
+    --aqua: #2D9CDB;
+    --aqua-tint: #E4F4FD;
+    --berry: #E66A8D;
+    --berry-tint: #FCE5EC;
+    --grape: #8E6CE8;
+    --grape-tint: #F0EAFF;
+    --sun: #F2994A;
+    --sun-tint: #FFF0E2;
+    --mint: #27AE60;
+    --mint-tint: #E5F8EE;
+
+    --radius-card: 22px;
+    --radius-field: 999px;
+
+    /* 阴影极轻，只用一层，靠透明度而不是模糊半径堆出层次 */
+    --shadow-soft: 0 1px 2px rgba(24, 48, 66, .04), 0 8px 24px rgba(24, 48, 66, .05);
+
+    --gutter: 14px;
+    --max-width: 540px;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --ink: #F2F4F7;
+        --slate: #9AA2AE;
+        --mist: #2A2F37;
+
+        --bg: #0E1116;
+        --surface: #161A21;
+        --surface-sunken: #1C2129;
+
+        --accent-soft: #2A1F21;
+        --accent-tint: #3A2529;
+
+        --aqua-tint: #16303F;
+        --berry-tint: #36222A;
+        --grape-tint: #262040;
+        --sun-tint: #3A2A18;
+        --mint-tint: #17301F;
+
+        --shadow-soft: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--bg);
+    /* 顶部一层极淡的暖色渐变，模拟苹果官网那种「有一点光从上面来」的感觉 */
+    background-image: linear-gradient(180deg, var(--accent-soft) 0, var(--bg) 320px);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background-image: linear-gradient(180deg, #1A1416 0, var(--bg) 320px);
+    }
+}
+
+.page {
+    width: 100%;
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 var(--gutter) 40px;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* ---------- 页头 ---------- */
+
+/* 标题与来源下拉同排：左边是站名，右边是「搜索前的设置」。
+   用 flex-start 而不是 center——标题下面还有 tagline，居中会让下拉
+   落在两行文字的竖直中点上，看着像飘在标题旁边。 */
+.masthead {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 40px 2px 20px;
+}
+
+.masthead-text {
+    min-width: 0;
+}
+
+.masthead h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+
+.tagline {
+    margin: 6px 0 0;
+    color: var(--slate);
+    font-size: 14px;
+}
+
+/* 页头里的下拉比搜索行里的控件矮一档：它是设置项，不该跟输入框争视觉重量 */
+.masthead .select select {
+    height: 40px;
+    max-width: 150px;
+    font-size: 14px;
+}
+
+/* ---------- 搜索条 ---------- */
+
+/* 输入框和搜索按钮锁在同一行：这是「一次搜索动作」的两个部分，
+   折行会把它们拆成看起来不相干的两块。窄屏下靠输入框收缩，不换行。 */
+.searchbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.field {
+    position: relative;
+    flex: 1 1 auto;
+    /* flex 子项默认 min-width:auto，长 placeholder 会把输入框顶宽、
+       把按钮挤出容器——必须显式归零才收缩得动 */
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+
+.field-icon {
+    position: absolute;
+    left: 14px;
+    width: 18px;
+    height: 18px;
+    fill: var(--accent);
+    pointer-events: none;
+}
+
+/* 16px 而不是 15px：iOS Safari 在 <16px 的输入框上聚焦会强制放大页面 */
+.field input {
+    width: 100%;
+    height: 48px;
+    padding: 0 16px 0 42px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-field);
+    background: var(--surface-sunken);
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+    outline: none;
+    transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+
+.field input::placeholder {
+    color: var(--slate);
+}
+
+.field input:focus {
+    border-color: var(--accent);
+    background: var(--surface);
+    box-shadow: 0 0 0 4px var(--accent-tint);
+}
+
+/* 去掉 type=search 在 WebKit 里的原生清除按钮，样式无法统一 */
+.field input::-webkit-search-cancel-button {
+    appearance: none;
+}
+
+.select {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    /* 不参与收缩：下拉缩窄到几十像素就只剩「全部…」，比折行更糟 */
+    flex: 0 0 auto;
+}
+
+.select select {
+    appearance: none;
+    height: 48px;
+    max-width: 160px;
+    padding: 0 36px 0 16px;
+    border: 1px solid var(--mist);
+    border-radius: var(--radius-field);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.select select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-tint);
+}
+
+.select-caret {
+    position: absolute;
+    right: 12px;
+    width: 18px;
+    height: 18px;
+    color: var(--slate);
+    pointer-events: none;
+}
+
+.submit {
+    position: relative;
+    flex: 0 0 auto;
+    height: 48px;
+    min-width: 84px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: var(--radius-field);
+    background: var(--accent);
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color .18s ease, transform .12s ease, opacity .18s ease;
+}
+
+.submit:hover:not(:disabled) {
+    background: var(--accent-strong);
+}
+
+/* 按下时轻微下沉，就是苹果按钮那一点反馈 */
+.submit:active:not(:disabled) {
+    transform: scale(.975);
+}
+
+.submit:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.submit-spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    margin: 0 auto;
+    border: 2px solid rgba(255, 255, 255, .45);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+}
+
+.searchbar.is-loading .submit-label {
+    display: none;
+}
+
+.searchbar.is-loading .submit-spinner {
+    display: block;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ---------- 结果开关（只看相关 / 搜索优化） ---------- */
+
+/* 开关单独成行，与搜索行之间留出间距。
+   （容器仍用 flex + wrap：以前这里并排放两个开关，合并成一个之后
+   这套排布留着不碍事，将来再加开关也不必重写。） */
+.switches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 22px;
+    margin-top: 12px;
+}
+
+/* 自己画开关而不是用 <input type=checkbox> 原生样式：原生框在各浏览器
+   大小和配色都不一样，跟这套圆角胶囊控件放一起很突兀。
+   真正的 input 留着但视觉上藏掉——键盘可达性和读屏语义都靠它，
+   点击目标则交给 label 整体（点文字也能切换）。 */
+.switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 2px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.switch input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.switch-track {
+    position: relative;
+    flex: 0 0 auto;
+    width: 38px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--mist);
+    transition: background-color .18s ease;
+}
+
+.switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(24, 48, 66, .28);
+    transition: transform .18s ease;
+}
+
+.switch input:checked + .switch-track {
+    background: var(--accent);
+}
+
+.switch input:checked + .switch-track .switch-knob {
+    transform: translateX(16px);
+}
+
+/* 键盘走查时给整个开关一圈焦点环（input 本身被藏起来了，它自己的
+   :focus-visible 看不见） */
+.switch input:focus-visible + .switch-track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.switch-text {
+    color: var(--slate);
+    font-size: 13px;
+}
+
+/* ---------- 进度条 ---------- */
+
+.progress {
+    height: 2px;
+    margin: 14px 2px 0;
+    border-radius: 2px;
+    overflow: hidden;
+    background: transparent;
+}
+
+.progress i {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width .4s ease;
+}
+
+.progress.is-active i {
+    width: 72%;
+}
+
+.progress.is-done i {
+    width: 100%;
+    opacity: 0;
+    transition: width .2s ease, opacity .35s ease .15s;
+}
+
+/* ---------- 状态行 ---------- */
+
+.status {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 18px;
+    background: var(--accent-soft);
+    color: var(--ink);
+    font-size: 13px;
+}
+
+.status:empty {
+    display: none;
+}
+
+/* ---------- 结果列表 ---------- */
+
+.results {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.card {
+    padding: 14px;
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow-soft);
+    /* 卡片本身不设边框，靠阴影分隔——边框和阴影同时用会显脏 */
+}
+
+.card-head {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.card-title {
+    flex: 1;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.45;
+    /* 标题通常很长，两行截断；用户想看全的可以复制 */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+.card-index {
+    flex: 0 0 auto;
+    padding: 3px 9px;
+    border-radius: var(--radius-field);
+    background: var(--accent-tint);
+    color: var(--berry);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* chip 顺序固定：[来源][大小][日期][下载 N][做种 N]，与 Compose 的 ResultCard 一致 */
+.chip {
+    padding: 3px 9px;
+    border-radius: var(--radius-field);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.chip-source {
+    background: var(--aqua-tint);
+    color: var(--aqua);
+}
+
+.chip-size {
+    background: var(--berry-tint);
+    color: var(--berry);
+}
+
+.chip-date {
+    background: var(--grape-tint);
+    color: var(--grape);
+}
+
+.chip-download {
+    background: var(--sun-tint);
+    color: var(--sun);
+}
+
+.chip-seed {
+    background: var(--mint-tint);
+    color: var(--mint);
+}
+
+.card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.button {
+    padding: 7px 14px;
+    border: 0;
+    border-radius: var(--radius-field);
+    background: var(--surface-sunken);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color .16s ease, transform .12s ease, opacity .16s ease;
+}
+
+.button:hover:not(:disabled) {
+    background: var(--accent-tint);
+}
+
+.button:active:not(:disabled) {
+    transform: scale(.97);
+}
+
+/* 拿不到磁力的条目：按钮还在但要能看出点不了，且解释原因 */
+.button:disabled {
+    opacity: .45;
+    cursor: default;
+}
+
+.button-primary {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-weight: 600;
+}
+
+.button-primary:hover:not(:disabled) {
+    background: var(--accent-tint);
+}
+
+/* 键盘焦点环。鼠标点击不触发 :focus-visible，不会出现「点一下就多一圈」；
+   用 Tab 走查弹窗时才看得见自己在哪。
+   index.html 里的内联 SVG 都带 `fill="none"`，所以这里描边即可。 */
+.button:focus-visible,
+.submit:focus-visible,
+.error-bar:focus-visible,
+.modal-close:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* ---------- 空态 ---------- */
+
+.empty {
+    padding: 56px 20px;
+    text-align: center;
+}
+
+.empty-dot {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    /* 用内嵌 SVG 画一个淡圆圈里的放大镜，避免再引一张图 */
+    background-image: radial-gradient(circle at 50% 50%, var(--accent-tint) 0 40%, transparent 41%);
+}
+
+.empty h2 {
+    margin: 0 0 6px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.empty p {
+    margin: 0;
+    color: var(--slate);
+    font-size: 14px;
+}
+
+/* 错误态里的动作按钮（「知道了」）与收起后的窄条。
+   窄条刻意保留可点：错误信息收起来不等于事情解决了，
+   用户常常要回头确认到底哪个源挂了。 */
+.empty .button {
+    margin-top: 18px;
+}
+
+.error-bar {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--accent-tint);
+    border-radius: var(--radius-card);
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.error-bar:hover {
+    background: var(--accent-tint);
+}
+
+/* 骨架屏：加载时占位，比转圈更不容易让页脚跳动 */
+.skeleton {
+    height: 84px;
+    border-radius: var(--radius-card);
+    background: linear-gradient(90deg,
+    var(--surface-sunken) 25%, var(--mist) 37%, var(--surface-sunken) 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+    from {
+        background-position: 100% 0;
+    }
+    to {
+        background-position: 0 0;
+    }
+}
+
+/* ---------- 加载更多 ---------- */
+
+.loadmore {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 0 6px;
+}
+
+.loadmore-note {
+    color: var(--slate);
+    font-size: 13px;
+}
+
+/* ---------- 页脚与提示 ---------- */
+
+.footnote {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--mist);
+    color: var(--slate);
+    font-size: 12px;
+    text-align: center;
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    /* 必须高于 .modal-panel：弹窗里复制的成功提示不能反被弹窗盖住 */
+    z-index: 60;
+    transform: translateX(-50%) translateY(8px);
+    padding: 10px 20px;
+    border-radius: var(--radius-field);
+    background: var(--ink);
+    color: var(--bg);
+    font-size: 13px;
+    box-shadow: var(--shadow-soft);
+    opacity: 0;
+    transition: opacity .2s ease, transform .2s ease;
+    pointer-events: none;
+}
+
+.toast.is-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* 成功态用绿色，和 chip 的 mint 同源；失败态用强调红。
+   底部提示离按钮很远，颜色是唯一能在余光里分辨「成了没有」的线索。 */
+.toast.is-success {
+    background: var(--mint);
+    color: #fff;
+}
+
+.toast.is-error {
+    background: var(--accent-strong);
+    color: #fff;
+}
+
+/* 复制成功/失败后就地改按钮文案并染色，比只有 toast 可靠——
+   用户点完视线还在按钮上，这里的变化是零延迟的 */
+.button.is-copied {
+    background: var(--mint-tint);
+    color: var(--mint);
+}
+
+.button.is-copied-fail {
+    background: var(--accent-tint);
+    color: var(--accent-strong);
+}
+
+/* 复制失败时摊出来的磁力原文，readonly 便于手动全选 */
+.manual-copy {
+    margin-top: 10px;
+}
+
+.manual-copy-area {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--mist);
+    border-radius: 14px;
+    background: var(--surface-sunken);
+    color: var(--ink);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+}
+
+.manual-copy-area:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-tint);
+}
+
+/* 手动复制的提示。textarea 是 readonly 的，浏览器的「已粘贴」原生提示不会出现；
+   两条路径都失败说明 Clipboard API 与 execCommand 都不通，多数是浏览器策略或
+   非安全上下文的限制，用户多半还得自己按一次 Ctrl/Cmd+C，所以说清楚。 */
+.manual-copy-hint {
+    margin: 8px 0 0;
+    color: var(--slate);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* ---------- 磁力弹窗 ---------- */
+
+.modal {
+    position: fixed;
+    inset: 0;
+    /* 高于页面内容、低于 .toast（60）：弹窗里的复制提示要能盖在弹窗上 */
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal[hidden] {
+    /* 不加这条时，display:flex 会覆盖 [hidden] 的 display:none */
+    display: none;
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(16, 34, 48, .38);
+}
+
+.modal-panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 480px;
+    max-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    padding: 18px;
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: 0 12px 48px rgba(24, 48, 66, .22);
+    animation: modal-in .18s ease;
+}
+
+@keyframes modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(.985);
+    }
+}
+
+.modal-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.modal-titles {
+    flex: 1;
+    min-width: 0;
+}
+
+.modal-titles h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.modal-subtitle {
+    margin: 4px 0 0;
+    color: var(--slate);
+    font-size: 12px;
+    line-height: 1.5;
+    /* 资源标题通常很长，两行截断即可，用户不需要在这里读全 */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+.modal-close {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--surface-sunken);
+    color: var(--slate);
+    cursor: pointer;
+    transition: background-color .16s ease;
+}
+
+.modal-close:hover {
+    background: var(--mist);
+}
+
+.modal-close svg {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+}
+
+.modal-body {
+    margin-top: 16px;
+    overflow-y: auto;
+}
+
+.modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.modal-hint {
+    margin: 14px 0 0;
+    color: var(--slate);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* ---------- 弹窗里的等待 / 失败态 ---------- */
+
+.modal-loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    color: var(--ink);
+    font-size: 14px;
+}
+
+.spinner {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--mist);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+}
+
+.modal-error {
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.modal-error strong {
+    color: var(--accent-strong);
+}
+
+@media (max-width: 420px) {
+    .masthead {
+        padding-top: 28px;
+    }
+
+    .masthead h1 {
+        font-size: 26px;
+    }
+
+    /* 窄屏：搜索按钮保留整行会有「按钮比输入框还宽」的怪感，
+       改为收起左右内边距、只留「搜索」二字，让它和输入框共处一行 */
+    .searchbar .submit {
+        min-width: 0;
+        padding: 0 16px;
+    }
+
+    .masthead .select select {
+        max-width: 118px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+    }
+}

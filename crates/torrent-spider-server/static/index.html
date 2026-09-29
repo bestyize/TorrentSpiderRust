@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <title>TorrentSpider</title>
+    <link rel="stylesheet" href="/styles.css">
+    <!-- 图标用内联 SVG，不引外部字体：省一次请求，也避免离线时图标变方块 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%23FD7979'/></svg>">
+</head>
+<body>
+<div class="page">
+    <!-- 来源选择放页头右上角，与标题同排；搜索行只留输入框 + 搜索按钮。
+         它是「搜索前的设置」而不是搜索动作本身，混在搜索行里会被误当成
+         和关键字同级的输入项。 -->
+    <header class="masthead">
+        <div class="masthead-text">
+            <h1>TorrentSpider</h1>
+            <p class="tagline">11 个磁力索引站，一次搜索</p>
+        </div>
+
+        <label class="select">
+            <span class="visually-hidden">搜索源</span>
+            <select id="source" aria-label="搜索源">
+                <option value="all">全部来源</option>
+            </select>
+            <svg class="select-caret" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </label>
+    </header>
+
+    <form class="searchbar" id="search-form" autocomplete="off">
+        <div class="field">
+            <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M10.5 3a7.5 7.5 0 1 0 4.55 13.46l4.24 4.25a1 1 0 0 0 1.42-1.42l-4.25-4.24A7.5 7.5 0 0 0 10.5 3Zm0 2a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11Z"/>
+            </svg>
+            <input id="query" type="search" placeholder="搜索关键字" aria-label="搜索关键字" required>
+        </div>
+
+        <button class="submit" id="submit" type="submit">
+            <span class="submit-label">搜索</span>
+            <span class="submit-spinner" aria-hidden="true"></span>
+        </button>
+    </form>
+
+    <!-- 一个开关，在搜索行之外单独成行：它决定的是「搜索结果怎么呈现和怎么取」，
+         不是搜索的输入项，跟关键字和来源不是一回事。
+         默认勾选，它同时做两件互相配套的事：
+         ① 补搜数字的另一种写法——站点多半按字面搜，搜「复仇者联盟四」和「复仇者联盟4」
+            给出的结果几乎不相交，两种都搜一遍再合并，输入哪种写法都能拿全；
+         ② 隐藏与关键词无关的结果——这些站点会附送一堆跟查询无关的东西（实测搜「三体」，
+            七个站点返回 266 条，其中 227 条是靠标题里恰好有个「三」字蹭上来的）。
+         两者都让「搜出来的东西更贴近你要找的」，所以合成一个开关；
+         关掉它就回到「只按字面搜一次、原样列出上游给的全部结果」。 -->
+    <div class="switches">
+        <label class="switch">
+            <input type="checkbox" id="optimize" checked>
+            <span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span>
+            <span class="switch-text">搜索优化（补搜数字的另一种写法，并隐藏与关键词无关的结果）</span>
+        </label>
+    </div>
+
+    <!-- 细进度条：加载时才有宽度动画。用不可见占位撑住高度，避免出现时把内容顶下去 -->
+    <div class="progress" id="progress" role="progressbar" aria-hidden="true"><i></i></div>
+
+    <section class="status" id="status" hidden></section>
+
+    <main class="results" id="results" aria-live="polite"></main>
+
+    <footer class="footnote">仅用于搜索合法、可分发内容</footer>
+</div>
+
+<!-- 复制反馈的浮层，避免为了一个提示引入整套 toast 库 -->
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<!-- 磁力弹窗。内容（文本框 / 加载态 / 错误态）由 app.js 按需构建：
+     三种状态共用一个壳，外壳留在 HTML 里是为了让样式和结构一眼能对上。
+     放在 toast 之前，靠 z-index 让 toast 盖在弹窗之上——在弹窗里点「复制」
+     时，那条成功提示不能被弹窗自己挡住。 -->
+<div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+
+    <div class="modal-panel" id="modal-panel" role="dialog" aria-modal="true"
+         aria-labelledby="modal-title">
+        <header class="modal-head">
+            <div class="modal-titles">
+                <h2 id="modal-title">磁力链接</h2>
+                <p class="modal-subtitle" id="modal-subtitle"></p>
+            </div>
+            <button class="modal-close" id="modal-close" type="button" aria-label="关闭">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor"
+                          stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </header>
+
+        <div class="modal-body" id="modal-body"></div>
+    </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

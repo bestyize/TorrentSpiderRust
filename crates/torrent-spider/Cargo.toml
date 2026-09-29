@@ -1,0 +1,35 @@
+[package]
+name = "torrent-spider"
+description = "Magnet search across multiple torrent index sites"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+# 内置的 reqwest HTTP 客户端；关掉它就只剩纯解析逻辑，宿主自己实现 `HttpClient`
+reqwest = ["dep:reqwest"]
+# 测试工具（假 HTTP 客户端、固定哈希），供下游 crate 的测试复用
+testing = []
+
+[dependencies]
+async-trait.workspace = true
+base64 = "0.23.1"
+futures.workspace = true
+percent-encoding = "2.3.2"
+regex = "1.13.1"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "gzip", "brotli", "deflate", "http2"], optional = true }
+scraper = "0.27.0"
+serde.workspace = true
+serde_json.workspace = true
+thiserror = "2.0.21"
+tokio = { workspace = true, features = ["time", "macros"] }
+
+[dev-dependencies]
+# 本 crate 的集成测试（tests/）是外部 crate，要靠这一行才能用上 testing feature
+torrent-spider = { workspace = true, features = ["testing"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
+
+[[example]]
+name = "search"
+required-features = ["reqwest"]
