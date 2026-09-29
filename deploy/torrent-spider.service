@@ -41,7 +41,7 @@ ProtectKernelLogs=yes
 ProtectControlGroups=yes
 ProtectClock=yes
 ProtectHostname=yes
-# AF_NETLINK：glibc 版解析域名时可能用到
+# AF_NETLINK：glibc 解析域名时会用到
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
 RestrictNamespaces=yes
 RestrictRealtime=yes

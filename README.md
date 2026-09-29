@@ -97,15 +97,15 @@ curl -s "http://localhost:55555/api/magnet?src=7&detail_url=https%3A%2F%2Fwww.to
 
 ## 部署到 Linux 服务器
 
-仓库的 Actions 页里有一个手动触发的 workflow「Build Linux server」：点「Run workflow」选目标，
-产物在该次运行页面底部的 Artifacts 里。默认的 `x86_64-unknown-linux-musl` 是静态链接，任意 x86_64 发行版可直接运行。
-每次构建都会先跑全部测试，再在 runner 的 systemd 上把发布包真装一遍（安装、升级、坏版本回滚、卸载）。
+目标系统是 Ubuntu 26.04 x86_64。仓库的 Actions 页里有一个手动触发的 workflow「Build Linux server」：
+点「Run workflow」，产物在该次运行页面底部的 Artifacts 里。它在 `ubuntu-26.04` runner 上原生构建，
+先跑全部测试，再在同版本的 systemd 上把发布包真装一遍（安装、升级、坏版本回滚、卸载）。
 
 发布包里带了基于 systemd 的运维脚本：
 
 ```sh
-tar -xzf torrent-spider-server-0.1.0-x86_64-unknown-linux-musl.tar.gz
-cd torrent-spider-server-0.1.0-x86_64-unknown-linux-musl
+tar -xzf torrent-spider-server-0.1.0-ubuntu26.04-x86_64.tar.gz
+cd torrent-spider-server-0.1.0-ubuntu26.04-x86_64
 sudo ./torrent-spider.sh install      # 之后用 torrent-spider status / logs / upgrade / rollback
 ```
 

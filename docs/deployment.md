@@ -1,9 +1,10 @@
 # 部署
 
-服务端是单个静态链接的可执行文件（网页已编译进去），进程交给 systemd 管理。
+服务端是单个可执行文件（网页已编译进去），进程交给 systemd 管理。
 发布包里的 `torrent-spider.sh` 负责安装、升级、回滚和日常运维。
 
-要求：x86_64 Linux、systemd、root 权限。
+要求：Ubuntu 26.04 x86_64、root 权限。发布包在 `ubuntu-26.04` runner 上构建，链接的是 26.04 的 glibc，
+不保证能在更老的系统上运行。
 
 ## 1. 拿到发布包
 
@@ -11,18 +12,16 @@
 也可以用命令行：
 
 ```sh
-gh workflow run build-linux-server.yml -f target=x86_64-unknown-linux-musl
-gh run download --name torrent-spider-server-0.1.0-x86_64-unknown-linux-musl
+gh workflow run build-linux-server.yml
+gh run download --name torrent-spider-server-0.1.0-ubuntu26.04-x86_64
 sha256sum -c torrent-spider-server-*.tar.gz.sha256
 ```
-
-默认的 musl 版本不依赖系统库，任何 x86_64 发行版都能跑。
 
 ## 2. 安装
 
 ```sh
-tar -xzf torrent-spider-server-0.1.0-x86_64-unknown-linux-musl.tar.gz
-cd torrent-spider-server-0.1.0-x86_64-unknown-linux-musl
+tar -xzf torrent-spider-server-0.1.0-ubuntu26.04-x86_64.tar.gz
+cd torrent-spider-server-0.1.0-ubuntu26.04-x86_64
 sudo ./torrent-spider.sh install
 ```
 
@@ -68,7 +67,7 @@ sudo torrent-spider stop | start
 **升级**：把新发布包传到服务器上，执行
 
 ```sh
-sudo torrent-spider upgrade torrent-spider-server-<新版本>-x86_64-unknown-linux-musl.tar.gz
+sudo torrent-spider upgrade torrent-spider-server-<新版本>-ubuntu26.04-x86_64.tar.gz
 ```
 
 脚本先试跑新二进制，确认能在这台机器上执行；然后备份旧版本、替换、重启，等健康检查通过。

@@ -1,7 +1,10 @@
-# 手动构建 Linux x86_64 的 torrent-spider-server。
+# 手动构建部署到 Ubuntu 26.04 x86_64 的 torrent-spider-server。
+#
+# 直接在 ubuntu-26.04 runner 上原生构建：链接的 glibc 与服务器一致，
+# 部署测试也跑在与生产相同版本的 systemd 上。
 #
 # 在 GitHub 的 Actions 页选中本 workflow，点「Run workflow」即可；也可以用命令行：
-#   gh workflow run build-linux-server.yml -f target=x86_64-unknown-linux-musl
+#   gh workflow run build-linux-server.yml
 # 产物在该次运行页面底部的 Artifacts 里；服务器上的部署步骤见 docs/deployment.md。
 
 name: Build Linux server
@@ -9,13 +12,6 @@ name: Build Linux server
 on:
   workflow_dispatch:
     inputs:
-      target:
-        description: 构建目标。musl 是静态链接，任意 x86_64 Linux 发行版都能直接跑；gnu 依赖系统的 glibc
-        type: choice
-        default: x86_64-unknown-linux-musl
-        options:
-          - x86_64-unknown-linux-musl
-          - x86_64-unknown-linux-gnu
       run_tests:
         description: 构建前先跑全部测试
         type: boolean
@@ -26,43 +22,34 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  TARGET: ${{ inputs.target }}
+  PLATFORM: ubuntu26.04-x86_64
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ inputs.target }}
-
-      # reqwest 的 TLS 走 rustls + aws-lc-rs，aws-lc-sys 要编 C 代码；musl 目标需要 musl 的 C 工具链
-      - name: Install musl toolchain
-        if: endsWith(inputs.target, '-musl')
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends musl-tools
 
       - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ inputs.target }}
 
       - name: Test
         if: inputs.run_tests
         run: cargo test --workspace --all-features --locked
 
       - name: Build
-        run: cargo build --release --locked -p torrent-spider-server --target "$TARGET"
+        run: cargo build --release --locked -p torrent-spider-server
 
       - name: Package
         id: package
         run: |
           version=$(cargo metadata --no-deps --format-version 1 \
             | jq -r '.packages[] | select(.name == "torrent-spider-server") | .version')
-          name="torrent-spider-server-${version}-${TARGET}"
+          name="torrent-spider-server-${version}-${PLATFORM}"
           mkdir -p "dist/$name"
-          cp "target/$TARGET/release/torrent-spider-server" "dist/$name/"
+          cp target/release/torrent-spider-server "dist/$name/"
           cp deploy/torrent-spider.sh deploy/torrent-spider.service deploy/torrent-spider.env "dist/$name/"
           chmod +x "dist/$name/torrent-spider.sh"
           cp README.md "dist/$name/"
@@ -78,9 +65,7 @@ jobs:
         run: |
           bin="dist/${{ steps.package.outputs.name }}/torrent-spider-server"
           file "$bin"
-          if [[ "$TARGET" == *-musl ]]; then
-            ! ldd "$bin" 2>/dev/null | grep -q '=>' || { echo "musl 产物不应动态链接任何库"; exit 1; }
-          fi
+          ldd "$bin"
           PORT=55555 HOST=127.0.0.1 SENSITIVE_FILTER=0 "$bin" &
           pid=$!
           for _ in $(seq 1 30); do
