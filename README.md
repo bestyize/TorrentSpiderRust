@@ -13,8 +13,10 @@
 
 ```
 Cargo.toml                       workspace 与共用依赖版本
+deploy/                          systemd 单元、配置模板、安装与运维脚本
 docs/
   api.md                         HTTP 接口契约
+  deployment.md                  部署到 Linux 服务器
   requirements.md                需求说明
 crates/
   torrent-spider/                核心库
@@ -93,22 +95,21 @@ curl -s "http://localhost:55555/api/magnet?src=7&detail_url=https%3A%2F%2Fwww.to
 
 服务没有鉴权。默认监听 `0.0.0.0` 是为了方便局域网访问；放到公网前请加一层反向代理和访问控制。
 
-## 构建 Linux 服务端
+## 部署到 Linux 服务器
 
-仓库的 Actions 页里有一个手动触发的 workflow「Build Linux server」（`.github/workflows/build-linux-server.yml`）：
-点「Run workflow」，选目标后运行，产物在该次运行页面底部的 Artifacts 里（保留 30 天）。
+仓库的 Actions 页里有一个手动触发的 workflow「Build Linux server」：点「Run workflow」选目标，
+产物在该次运行页面底部的 Artifacts 里。默认的 `x86_64-unknown-linux-musl` 是静态链接，任意 x86_64 发行版可直接运行。
+每次构建都会先跑全部测试，再在 runner 的 systemd 上把发布包真装一遍（安装、升级、坏版本回滚、卸载）。
 
-- `x86_64-unknown-linux-musl`（默认）：静态链接，任意 x86_64 Linux 发行版解压即可运行；
-- `x86_64-unknown-linux-gnu`：依赖系统 glibc。
-
-构建前会先跑全部测试，产物会真的启动一次并请求 `/api/health` 做冒烟检查。命令行触发：
+发布包里带了基于 systemd 的运维脚本：
 
 ```sh
-gh workflow run build-linux-server.yml -f target=x86_64-unknown-linux-musl
-gh run download --name torrent-spider-server-0.1.0-x86_64-unknown-linux-musl
+tar -xzf torrent-spider-server-0.1.0-x86_64-unknown-linux-musl.tar.gz
+cd torrent-spider-server-0.1.0-x86_64-unknown-linux-musl
+sudo ./torrent-spider.sh install      # 之后用 torrent-spider status / logs / upgrade / rollback
 ```
 
-压缩包里是单个可执行文件（网页已编译进去）、README 和接口文档，配置见上面的环境变量表。
+配置、升级回滚、反向代理与排查见 [docs/deployment.md](docs/deployment.md)。
 
 ## 作为库使用
 

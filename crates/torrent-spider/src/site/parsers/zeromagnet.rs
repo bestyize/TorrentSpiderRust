@@ -37,10 +37,10 @@ impl ZeroMagnet {
         let document = html::parse(body);
         let cells = html::select(document.root_element(), "td");
         // 列表是「标题单元格 + 尺寸单元格」两两成对排的
-        cells
-            .chunks_exact(2)
-            .filter_map(|pair| {
-                let (title_cell, size_cell) = (pair[0], pair[1]);
+        let (pairs, _) = cells.as_chunks::<2>();
+        pairs
+            .iter()
+            .filter_map(|&[title_cell, size_cell]| {
                 let detail_href =
                     html::select_first_any(title_cell, &[&format!("a[href^='{DETAIL_PATH_PREFIX}']"), "a"])
                         .map(|a| html::attr(a, "href"))

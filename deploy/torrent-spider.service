@@ -1,0 +1,50 @@
+# TorrentSpider 服务端的 systemd 单元。
+#
+# 一般由 torrent-spider.sh install 安装到 /etc/systemd/system/，不必手工拷贝。
+# 本地修改建议用 `systemctl edit torrent-spider` 写 drop-in，免得升级时被覆盖。
+
+[Unit]
+Description=TorrentSpider 磁力搜索服务
+Documentation=https://github.com/bestyize/TorrentSpiderRust/blob/master/docs/deployment.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/torrent-spider/torrent-spider-server
+EnvironmentFile=-/etc/torrent-spider/torrent-spider.env
+
+# 大陆 IP 段的落盘缓存。systemd 负责创建 /var/cache/torrent-spider 并交给服务用户，
+# 沙箱下别的目录不可写，所以在配置文件里改 SENSITIVE_CACHE_DIR 不会生效
+CacheDirectory=torrent-spider
+Environment=SENSITIVE_CACHE_DIR=%C/torrent-spider
+
+Restart=on-failure
+RestartSec=5
+# 优雅退出要等进行中的搜索结束；开了搜索优化时单个源最多串行两次、每次 25 秒
+TimeoutStopSec=60
+LimitNOFILE=65536
+
+# 沙箱：临时用户运行，只读文件系统，除了缓存目录哪里都写不了。
+# 默认端口 55555 不需要任何特权；要监听 1024 以下的端口，请放在反向代理后面
+DynamicUser=yes
+CapabilityBoundingSet=
+ProtectHome=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+# AF_NETLINK：glibc 版解析域名时可能用到
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
