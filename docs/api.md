@@ -164,7 +164,7 @@ TorLock、1337 等站点的搜索结果里没有磁力，要按需抓详情页�
   "status": "ok",
   "filter": {
     "enabled": true, "ready": true, "force_china": false,
-    "lexicon_entries": 1916, "china_ranges": 4744,
+    "lexicon_entries": 1929, "china_ranges": 4744,
     "client_ip": "192.168.18.169", "is_china": false
   }
 }

@@ -303,18 +303,19 @@ fn 真实词_生效词条数等于去重加口径筛过的结果() {
 fn 内置词库是一份合法的词库_json() {
     let value: serde_json::Value = serde_json::from_str(BUILTIN_JSON).expect("内置词库应当是合法 JSON");
     let words = value["words"].as_array().expect("应当含 words 数组");
-    // konsheng 2408 条 + gogoswift 929 条 + 补充 30 条光杆词，合并去重后 2014 条
-    assert_eq!(words.len(), 2014);
+    // konsheng 2408 条 + gogoswift 929 条 + 补充 30 条光杆词，合并去重后 2014 条；
+    // 2026-09-30 手工补充 15 条（其中「肏」重复一次），共 2029 条
+    assert_eq!(words.len(), 2029);
     assert!(words.iter().all(serde_json::Value::is_string));
 }
 
 #[test]
 fn 内置词库生效词条数与打包时一致() {
-    // 按匹配口径收窄后生效 1916 条（汉字词 1836 + 拉丁词 80）；其余是「一个汉字 + 字母」
+    // 按匹配口径收窄后生效 1929 条（汉字词 1849 + 拉丁词 80）；其余是「一个汉字 + 字母」
     // 和「<4 字符的拉丁词」，被有意丢弃。数字变了说明词库被重新生成过——确认是有意的再改这里。
     let lexicon = SensitiveLexicon::builtin();
     assert!(!lexicon.is_empty(), "内置词库解析失败会退回空表");
-    assert_eq!(lexicon.len(), 1916);
+    assert_eq!(lexicon.len(), 1929);
 }
 
 #[test]
@@ -324,6 +325,17 @@ fn 补充的光杆词确实生效了() {
     for word in ["色情", "成人", "约炮", "萝莉"] {
         assert!(lexicon.matches(&format!("前缀{word}后缀")), "补充词应当生效：{word}");
     }
+}
+
+#[test]
+fn 手工补充的词确实生效了() {
+    let lexicon = SensitiveLexicon::builtin();
+    for word in ["破处", "一炮", "鲍鱼", "处女", "干哭", "床上", "探花", "白虎", "大神", "美鲍", "啪啪", "约操", "强上"]
+    {
+        assert!(lexicon.matches(&format!("前缀{word}后缀")), "补充词应当生效：{word}");
+    }
+    // 单字「肏」也加进了词库，但单个汉字不参与匹配（误杀面太大），这是匹配口径的有意取舍
+    assert!(!lexicon.matches("前缀肏后缀"));
 }
 
 #[test]
