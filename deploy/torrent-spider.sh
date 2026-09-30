@@ -6,7 +6,7 @@
 #   sudo ./torrent-spider.sh install              安装并启动
 #
 # 安装后脚本会复制到 /usr/local/bin/torrent-spider，之后在任意目录：
-#   torrent-spider status                         运行状态、内存、违禁过滤是否就绪
+#   sudo torrent-spider status                    运行状态、内存、违禁过滤是否就绪
 #   torrent-spider logs [journalctl 参数]          跟踪日志
 #   sudo torrent-spider start | stop | restart
 #   sudo torrent-spider upgrade <发布包.tar.gz>     升级；新版本起不来会自动退回旧版本
@@ -467,7 +467,12 @@ cmd_status() {
   say "PID      : $pid"
   say "启动于   : $since"
   if [[ $mem =~ ^[0-9]+$ ]]; then say "内存     : $((mem / 1024 / 1024)) MB"; fi
-  if [[ ! -r $ENV_PATH ]]; then warn "（读不到 $ENV_PATH，按默认端口探测；用 sudo 执行才能看到实际配置）"; fi
+  # 配置文件是 0600，普通用户读不到端口。不去猜默认端口：同一台机器上那个端口可能是别的程序，
+  # 健康检查会问错对象、报出别人的状态
+  if [[ ! -r $ENV_PATH ]]; then
+    say "健康检查 : 跳过（读不到配置，不知道端口；用 sudo torrent-spider status 查看）"
+    return 0
+  fi
   say "地址     : $(service_url)"
   body=$(http_get "$(service_url)/api/health") || rc=$?
   case $rc in
@@ -530,7 +535,7 @@ TorrentSpider 服务端的安装与运维（systemd）
   logs [journalctl 参数]    跟踪日志，默认 -n 100 -f
   uninstall [--purge]      卸载；--purge 连配置和缓存一起删
 
-除 status、logs 外都需要 root。配置文件：$ENV_PATH
+除 logs 外都需要 root；status 不加 sudo 时只报服务状态，不做健康检查。配置文件：$ENV_PATH
 EOF
 }
 

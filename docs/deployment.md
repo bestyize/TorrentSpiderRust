@@ -56,7 +56,7 @@ sudo ./torrent-spider.sh install
 ## 4. 日常运维
 
 ```sh
-torrent-spider status                     # 状态、版本、内存、违禁过滤是否就绪
+sudo torrent-spider status                # 状态、版本、内存、违禁过滤是否就绪（不加 sudo 读不到配置，只报服务状态）
 torrent-spider logs                       # 跟踪日志；也可传 journalctl 参数，如 logs --since today
 sudo torrent-spider restart               # 改完配置后重启
 sudo torrent-spider stop | start
