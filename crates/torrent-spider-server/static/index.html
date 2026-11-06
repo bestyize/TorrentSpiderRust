@@ -46,23 +46,6 @@
         </button>
     </form>
 
-    <!-- 一个开关，在搜索行之外单独成行：它决定的是「搜索结果怎么呈现和怎么取」，
-         不是搜索的输入项，跟关键字和来源不是一回事。
-         默认勾选，它同时做两件互相配套的事：
-         ① 补搜数字的另一种写法——站点多半按字面搜，搜「复仇者联盟四」和「复仇者联盟4」
-            给出的结果几乎不相交，两种都搜一遍再合并，输入哪种写法都能拿全；
-         ② 隐藏与关键词无关的结果——这些站点会附送一堆跟查询无关的东西（实测搜「三体」，
-            七个站点返回 266 条，其中 227 条是靠标题里恰好有个「三」字蹭上来的）。
-         两者都让「搜出来的东西更贴近你要找的」，所以合成一个开关；
-         关掉它就回到「只按字面搜一次、原样列出上游给的全部结果」。 -->
-    <div class="switches">
-        <label class="switch">
-            <input type="checkbox" id="optimize" checked>
-            <span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span>
-            <span class="switch-text">搜索优化（补搜数字的另一种写法，并隐藏与关键词无关的结果）</span>
-        </label>
-    </div>
-
     <!-- 细进度条：加载时才有宽度动画。用不可见占位撑住高度，避免出现时把内容顶下去 -->
     <div class="progress" id="progress" role="progressbar" aria-hidden="true"><i></i></div>
 

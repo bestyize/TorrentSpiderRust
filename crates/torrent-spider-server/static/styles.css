@@ -18,10 +18,11 @@
     --slate: #6E6872;
     --mist: #E7E7EA;
 
-    /* 中性底：这次与 Compose 的珊瑚粉底不同，刻意压成白/灰 */
-    --bg: #FFFFFF;
+    /* 中性浅灰底 + 纯白卡片：拉开背景与卡片的层级，贴近移动端分组卡片列表 */
+    --bg: #F5F5F7;
     --surface: #FFFFFF;
-    --surface-sunken: #F5F5F7;
+    --surface-sunken: #EAEAEF;
+    --card-border: rgba(24, 48, 66, .06);
 
     /* 语义色，和结果卡上的 chip 一一对应 */
     --aqua: #2D9CDB;
@@ -54,6 +55,7 @@
         --bg: #0E1116;
         --surface: #161A21;
         --surface-sunken: #1C2129;
+        --card-border: rgba(255, 255, 255, .07);
 
         --accent-soft: #2A1F21;
         --accent-tint: #3A2529;
@@ -185,9 +187,9 @@ body {
     width: 100%;
     height: 48px;
     padding: 0 16px 0 42px;
-    border: 1px solid transparent;
+    border: 1px solid var(--mist);
     border-radius: var(--radius-field);
-    background: var(--surface-sunken);
+    background: var(--surface);
     color: var(--ink);
     font: inherit;
     font-size: 16px;
@@ -303,82 +305,6 @@ body {
     }
 }
 
-/* ---------- 结果开关（只看相关 / 搜索优化） ---------- */
-
-/* 开关单独成行，与搜索行之间留出间距。
-   （容器仍用 flex + wrap：以前这里并排放两个开关，合并成一个之后
-   这套排布留着不碍事，将来再加开关也不必重写。） */
-.switches {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 22px;
-    margin-top: 12px;
-}
-
-/* 自己画开关而不是用 <input type=checkbox> 原生样式：原生框在各浏览器
-   大小和配色都不一样，跟这套圆角胶囊控件放一起很突兀。
-   真正的 input 留着但视觉上藏掉——键盘可达性和读屏语义都靠它，
-   点击目标则交给 label 整体（点文字也能切换）。 */
-.switch {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    padding: 2px;
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-.switch input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.switch-track {
-    position: relative;
-    flex: 0 0 auto;
-    width: 38px;
-    height: 22px;
-    border-radius: 999px;
-    background: var(--mist);
-    transition: background-color .18s ease;
-}
-
-.switch-knob {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(24, 48, 66, .28);
-    transition: transform .18s ease;
-}
-
-.switch input:checked + .switch-track {
-    background: var(--accent);
-}
-
-.switch input:checked + .switch-track .switch-knob {
-    transform: translateX(16px);
-}
-
-/* 键盘走查时给整个开关一圈焦点环（input 本身被藏起来了，它自己的
-   :focus-visible 看不见） */
-.switch input:focus-visible + .switch-track {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
-
-.switch-text {
-    color: var(--slate);
-    font-size: 13px;
-}
-
 /* ---------- 进度条 ---------- */
 
 .progress {
@@ -429,21 +355,36 @@ body {
     margin-top: 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .card {
-    padding: 14px;
+    padding: 15px 16px;
+    border: 1px solid var(--card-border);
     border-radius: var(--radius-card);
     background: var(--surface);
     box-shadow: var(--shadow-soft);
-    /* 卡片本身不设边框，靠阴影分隔——边框和阴影同时用会显脏 */
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .14s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.card.is-clickable {
+    cursor: pointer;
+}
+
+.card.is-clickable:hover {
+    border-color: var(--accent-tint);
+}
+
+.card.is-clickable:active {
+    transform: scale(.988);
 }
 
 .card-head {
     display: flex;
     gap: 10px;
     align-items: flex-start;
+    justify-content: space-between;
 }
 
 .card-title {
@@ -452,6 +393,7 @@ body {
     font-size: 15px;
     font-weight: 600;
     line-height: 1.45;
+    letter-spacing: -.01em;
     /* 标题通常很长，两行截断；用户想看全的可以复制 */
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -468,20 +410,33 @@ body {
     color: var(--berry);
     font-size: 11px;
     font-weight: 700;
+    line-height: 1.4;
+}
+
+.card-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px 12px;
+    margin-top: 12px;
 }
 
 .chips {
     display: flex;
+    flex: 1 1 200px;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
+    gap: 6px;
+    min-width: 0;
 }
 
 /* chip 顺序固定：[来源][大小][日期][下载 N][做种 N]，与 Compose 的 ResultCard 一致 */
 .chip {
-    padding: 3px 9px;
+    padding: 4px 10px;
     border-radius: var(--radius-field);
     font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
     white-space: nowrap;
 }
 
@@ -512,9 +467,11 @@ body {
 
 .card-actions {
     display: flex;
+    flex: 0 0 auto;
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 8px;
-    margin-top: 12px;
+    margin-left: auto;
 }
 
 .button {

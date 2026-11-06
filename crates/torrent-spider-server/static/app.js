@@ -11,7 +11,6 @@
     const form = document.getElementById('search-form');
     const queryInput = document.getElementById('query');
     const sourceSelect = document.getElementById('source');
-    const optimizeToggle = document.getElementById('optimize');
     const submitButton = document.getElementById('submit');
     const progress = document.getElementById('progress');
     const statusRow = document.getElementById('status');
@@ -27,7 +26,7 @@
     const sourceTitles = new Map();
 
     /** 当前已展示结果对应的查询，翻页时复用；null 表示还没搜过。 */
-    let active = null; // { keyword, src, filter, optimize, page }
+    let active = null; // { keyword, src, page }
     /** 已出现过的条目键，翻页去重用——和 Compose 端 itemKey 的口径一致。 */
     let seenKeys = new Set();
     let loading = false;
@@ -548,6 +547,8 @@
         head.appendChild(el('span', 'card-index', `#${index + 1}`));
         card.appendChild(head);
 
+        const foot = el('div', 'card-foot');
+
         // chip 顺序固定：[来源][大小][日期][下载 N][做种 N]
         const chips = el('div', 'chips');
         chips.appendChild(el('span', 'chip chip-source', sourceTitle(item.src)));
@@ -564,9 +565,9 @@
         const seeds = value(item.sender_count);
         if (seeds) chips.appendChild(el('span', 'chip chip-seed', `做种 ${seeds}`));
 
-        card.appendChild(chips);
+        foot.appendChild(chips);
 
-        // 只留「获取磁力」一个动作。详情页链接与哈希复制都已移除：
+        // 只留「获取磁力」一个动作，靠右对齐。详情页链接与哈希复制都已移除：
         // 详情页 302/反爬后的落地页经常对不上标题，点过去多半是失望；
         // 哈希本身是磁力链接的子串，复制磁力已经覆盖了这个用途。
         //
@@ -580,7 +581,18 @@
         const magnetButton = el('button', 'button button-primary', '获取磁力');
         magnetButton.type = 'button';
         if (magnet || detailUrl) {
-            magnetButton.addEventListener('click', () => openMagnetModal(item, index, magnetButton));
+            card.classList.add('is-clickable');
+            card.addEventListener('click', (event) => {
+                // 用户在划选标题文字或操作手动复制框时不抢点击
+                const selection = window.getSelection ? String(window.getSelection()) : '';
+                if (selection) return;
+                if (event.target.closest('.manual-copy')) return;
+                openMagnetModal(item, index, magnetButton);
+            });
+            magnetButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                openMagnetModal(item, index, magnetButton);
+            });
         } else {
             // 既没磁力也没详情页：给不出磁力，按钮保留但禁用并说明原因，
             // 比直接不显示更好懂
@@ -588,8 +600,9 @@
             magnetButton.title = '这条结果里既没有磁力链接，也没有详情页地址';
         }
         actions.appendChild(magnetButton);
+        foot.appendChild(actions);
 
-        card.appendChild(actions);
+        card.appendChild(foot);
         return card;
     }
 
@@ -676,31 +689,22 @@
 
         const keyword = queryInput.value.trim();
         const src = sourceSelect.value;
-        // 一个开关驱动服务端的两个参数：补搜其它数字写法（optimize）与隐藏无关结果（filter）。
-        // 两者都让「搜出来的更贴近你要找的」，合成一个开关；关掉就都关掉，
-        // 回到「只按字面搜一次、原样列出上游给的全部结果」。
-        const optimized = optimizeToggle.checked;
-        const filter = optimized;
-        const optimize = optimized;
         if (!keyword) {
             queryInput.focus();
             return;
         }
 
-        // 换关键字、换来源或拨开关时都是「新搜索」，必须从第 1 页重来：
+        // 换关键字或换来源时都是「新搜索」，必须从第 1 页重来：
         // 否则会出现第 2 页的结果接在另一个关键字的结果后面。
-        // filter / optimize 也必须参与判断——口径变了，旧的那几页跟新的对不上。
         const isNewSearch = !active
             || active.keyword !== keyword
-            || active.src !== src
-            || active.filter !== filter
-            || active.optimize !== optimize;
+            || active.src !== src;
         if (isNewSearch && page !== 1) page = 1;
         const effectiveAppend = append && !isNewSearch;
 
         setLoading(true);
         if (!effectiveAppend) {
-            active = { keyword, src, filter, optimize, page: 1 };
+            active = { keyword, src, page: 1 };
             seenKeys = new Set();
             setStatus('正在搜索…');
             renderSkeletons();
@@ -712,8 +716,8 @@
             q: keyword,
             page: String(page),
             src,
-            filter: filter ? '1' : '0',
-            optimize: optimize ? '1' : '0',
+            filter: '1',
+            optimize: '1',
         });
         try {
             const response = await fetch(`/api/search?${params}`);
@@ -795,13 +799,6 @@
             event.preventDefault();
             runSearch({ page: 1, append: false });
         }
-    });
-
-    // 拨开关立刻重搜：这跟改关键字是同一类操作，都需要重新问一次服务端
-    // （补搜发生在服务端，过滤也发生在服务端，前端手上没有能自己筛的原始数据）。
-    // 没搜过时不动——首屏还没结果，重搜没有意义。
-    optimizeToggle.addEventListener('change', () => {
-        if (active) runSearch({ page: 1, append: false });
     });
 
     renderEmpty('还没有结果', '输入关键字并执行搜索，结果会在这里按卡片展示。');
